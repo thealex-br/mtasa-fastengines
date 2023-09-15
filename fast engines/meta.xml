@@ -1,11 +1,27 @@
 <meta>
-	<info name="fast engines" author="thealex-br" type="script" version="1.0.0"/>
+	<info name="fast engines" author="thealex-br" type="script" version="1.3.2"/>
 	
 	<script src="config.lua" type="client"/>
 	<script src="engine.lua" type="client"/>
 	<script src="common.lua" type="client"/>
 
-    <file src="audio/turbo.wav"/>
+    <file src="audio/extras/turbo.wav"/>
+    <file src="audio/extras/turbo_shift1.wav"/>
+    <file src="audio/extras/turbo_shift2.wav"/>
+    <file src="audio/extras/als1.wav"/>
+    <file src="audio/extras/als2.wav"/>
+    <file src="audio/extras/als3.wav"/>
+    <file src="audio/extras/als4.wav"/>
+    <file src="audio/extras/als5.wav"/>
+    <file src="audio/extras/als6.wav"/>
+    <file src="audio/extras/als7.wav"/>
+    <file src="audio/extras/als8.wav"/>
+    <file src="audio/extras/als9.wav"/>
+    <file src="audio/extras/als10.wav"/>
+    <file src="audio/extras/als11.wav"/>
+    <file src="audio/extras/als12.wav"/>
+    <file src="audio/extras/als13.wav"/>
+
 	<file src="audio/ferrari1.Ogg"/>
 	    <file src="audio/mr2.Ogg"/>
         <file src="audio/gti.Ogg"/>
