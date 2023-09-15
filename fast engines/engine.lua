@@ -10,39 +10,11 @@ data = {
 
 vehicles = {}
 
-local max = math.min
-local min = math.max
-local sqrt = math.sqrt
-local abs = math.abs
-
-function stopEngine(vehicle)
-    local data, gearData = data[vehicle], gData[vehicle]
-    if data then
-        handling[vehicle] = nil
-        if isElement( data.engine ) then
-            destroyElement(data.engine)
-            data.engine = nil
-        end
-        data.rpm = 0
-        data = nil
-    end
-    if gearData then
-        if isElement(gearData.turbo) then
-            destroyElement(gearData.turbo)
-            gearData.engine = nil
-        end
-        gearData.rpm = 0
-        gearData = nil
-    end
-    setElementData(vehicle, "engineRPM", false, false)
-    table.removeValue(vehicles, vehicle)
-end
-
 local function smoothRPM(vehicle, rpm, maxrpm)
     local currentRPM = data[vehicle].rpm or minimal
     local nRPM = currentRPM + (currentRPM < rpm and 0.055 or -0.047)
     currentRPM = currentRPM < rpm and max(nRPM, rpm) or min(nRPM, rpm)
-    data[vehicle].rpm = max(currentRPM, maxrpm)
+    data[vehicle].rpm = clamp(currentRPM, 0.01, maxrpm)
     return data[vehicle].rpm
 end
 
@@ -93,9 +65,9 @@ function doEngineSound()
                 local speed = sqrt(x*x + y*y + z*z)
                 local realSpeed = speed * 180
 
-                local hill = max( min(z, -0.09), 0.09)
+                local hill = clamp(z, -0.09, 0.09)
                 local gear = getVehicleCurrentGear(veh)
-                gear = (gear == 0 and reverseGear) or gear
+                gear = gear == 0 and reverseGear or gear
                 local gearMult = gearRatio[gear] or 1
 
                 if isOnGround(veh) then
@@ -124,34 +96,23 @@ function doEngineSound()
                     speed = info[3] * min(speed, 0.4)
                 end
                     
-                local ratio = gear + (hndgears - gear)
-                local audio = (ratio * speed / gear) + gear
+                local ratio = gear + hndgears - gear
+                local audio = gear + ratio * speed / gear
                 audio = audio / ratio / hndspeed
 
                 local result = smoothRPM(veh, state and audio or minimal, info[8])
-                result = min(max(result, info[8]), info[7]) or minimal
+                result = min(result, state and info[7] or 0)
                 setElementData(veh, elementDataName, result, false)
 
                 local engine = data[veh].engine
-                local volume = vol - max((0.3 * vol) * min(result, info[7]), 0.55*vol)
+                local volume = vol - clamp( (0.3 * vol) * result, info[7], 0.55 * vol)
 
+                doTurboSound(veh, driver, result, accel, brake)
                 setSoundSpeed(engine, result )
                 setSoundVolume(engine, audioVolume*volume )
             end
         end
     end
-end
-
-local lastTicks = {}
-function waitTick(tick, limiter)
-    limiter = limiter or "default"
-    local lastTick = lastTicks[limiter] or 0
-    local nowTick = getTickCount()
-    if lastTick + (tick or 2) > nowTick then
-        return false
-    end
-    lastTicks[limiter] = nowTick
-    return true
 end
 
 addEventHandler("onClientPreRender", root, function(delta)
