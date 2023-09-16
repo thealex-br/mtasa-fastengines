@@ -1,6 +1,14 @@
-# Fast Engines: A Lightweight Solution
+# ⚡ Fast Engines: A Lightweight Solution ⚡
 
-- Experience lightspeed performance.
-- Take full control of every aspect of your engine sound.
-- Compatible with [newmodels](https://github.com/Fernando-A-Rocha/mta-add-models).
-- See [Video demonstration](https://youtu.be/E7PMw6fYjnA?feature=shared)!
+### 🎮 Capabilities and Advantages 🎮
+- 📖 Compatible with [mta-add-models](https://github.com/Fernando-A-Rocha/mta-add-models), see [here](https://youtu.be/E7PMw6fYjnA?feature=shared&t=139)
+- 🔥 ALS system that auto adjust to your vehicle's model and handling
+- 🔉 Still hear the default sounds of unlisted vehicles
+- 💻 Excellent performance with only 0.87/1.3 5s CPU usage
+
+#
+
+### 🔍 New Features 🔍
+- ALS, Turbo, Blowoff valve, Works for bikes
+
+#
