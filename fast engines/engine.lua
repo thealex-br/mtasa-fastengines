@@ -20,11 +20,9 @@ end
 
 local exception = { [17] = true, [19] = true }
 addEventHandler("onClientWorldSound", root, function(group)
-    if isElegible(source) then
-        local id = getElementData(source, "vehicleID") or getElementModel(source)
-        if (data[source] or info[id]) and not exception[group] then
-            cancelEvent()
-        end
+    local id = getElementData(source, "vehicleID") or getElementModel(source)
+    if (data[source] or info[id]) and not exception[group] then
+        cancelEvent()
     end
 end)
 
