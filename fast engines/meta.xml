@@ -2,6 +2,7 @@
 	<info name="fast engines" author="thealex-br" type="script" version="1.3.2"/>
 	
 	<script src="config.lua" type="client"/>
+	<script src="extras.lua" type="client"/>
 	<script src="engine.lua" type="client"/>
 	<script src="common.lua" type="client"/>
 
