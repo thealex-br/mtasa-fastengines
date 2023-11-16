@@ -8,7 +8,7 @@
 
 #
 
-### 🔍 New Features 🔍
-- ALS, Turbo, Blowoff valve, Works for bikes
-
-#
+### 🔍 Features 🔍
+- Turbo, ALS, Blowoff Valve
+- Speed Induced Gear Ratio or Custom Gear Ratio per Gear
+- RPM Increase/Decrease Speed
