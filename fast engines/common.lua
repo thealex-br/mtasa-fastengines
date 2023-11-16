@@ -1,17 +1,7 @@
-max = math.min
-min = math.max
-sqrt = math.sqrt
-rad = math.rad
-cos = math.cos
-sin = math.sin
-acos = math.acos
-deg = math.deg
-floor = math.floor
-ceil = math.ceil
 minimal = 0.00001
 
 function clamp(value, minValue, maxValue)
-    return min(max(value, maxValue), minValue)
+    return math.max(math.min(value, maxValue), minValue)
 end
 
 function getPositionFromElementOffset(element,offX,offY,offZ)
@@ -22,71 +12,8 @@ function getPositionFromElementOffset(element,offX,offY,offZ)
     return x, y, z
 end
 
-local allowedExhaustBytes = { ["2"] = true, ["6"] = true, ["A"] = true, ["E"] = true }
-local allowedExhaustTypes = { ["0"] = true, ["1"] = false, ["2"] = true, ["3"] = false }
-function fxAddBackfire(vehicle)
-    if not (isElement(vehicle) and getVehicleType(vehicle) == "Automobile") then
-        return false
-    end
-    local modelFlags = getVehicleHandling(vehicle).modelFlags
-    local fourthByte = string.format("%08X", modelFlags):reverse():sub(4, 4)
-    local hasDoubleExhaust = allowedExhaustTypes[fourthByte] and allowedExhaustBytes[fourthByte]
-    local hasSingleExhaust = allowedExhaustTypes[fourthByte]
-    if not hasSingleExhaust then -- handling don't have exhaust
-        return false
-    end
-    local speed = Vector3(getElementVelocity(vehicle)).length / 1.5
-    local exhX, exhY, exhZ = getVehicleDummyPosition(vehicle, "exhaust")
-    if not exhX then -- if exhaust don't exist
-        return false
-    end
-    local direction = Vector3(getPositionFromElementOffset(vehicle, 0, -10000000, 0))
-    for _, side in ipairs({exhX, -1 * exhX}) do
-        local exhaust = Vector3(getPositionFromElementOffset(vehicle, side, exhY + speed, exhZ))
-        fxAddGunshot(exhaust, direction)
-        if not hasDoubleExhaust then -- allow only one exhaust to backfire
-            return true
-        end
-    end
-    return true
-end
-
-local lastTicks = {}
-function waitTick(tick, limiter)
-    limiter = limiter or "default"
-    local lastTick = lastTicks[limiter] or 0
-    local nowTick = getTickCount()
-    if lastTick + (tick or 2) > nowTick then
-        return false
-    end
-    lastTicks[limiter] = nowTick
-    return true
-end
-
-function stopEngine(vehicle)
-    if data[vehicle] then
-        if isElement( data[vehicle].engine ) then
-            destroyElement(data[vehicle].engine)
-            data[vehicle].engine = nil
-        end
-        data[vehicle].rpm = 0
-    end
-    if gData[vehicle] then
-        if isElement(gData[vehicle].turbo) then
-            destroyElement(gData[vehicle].turbo)
-            gData[vehicle].engine = nil
-        end
-        gData[vehicle].rpm = 0
-    end
-    handling[vehicle] = nil
-    data[vehicle] = nil
-    gData[vehicle] = nil
-    setElementData(vehicle, "engineRPM", false, false)
-    table.removeValue(vehicles, vehicle)
-end
-
 function table.removeValue(tab, val)
-    for index, value in pairs(tab) do 
+    for index, value in pairs(tab) do
         if value == val then
             table.remove(tab, index)
             return index
@@ -104,7 +31,80 @@ function table.hasValue(tab, val)
     return false
 end
 
-function playAttachedSound3D(soundPath, element, loop)
+function getCustomID(vehicle)
+    for _, key in pairs(elementDataIDs) do
+        local id = getElementData(vehicle, key)
+        if id then
+            return id
+        end
+    end
+    return getElementModel(vehicle)
+end
+
+local allowedExhaustBytes = { ["2"] = true, ["6"] = true, ["A"] = true, ["E"] = true }
+local allowedExhaustTypes = { ["0"] = true, ["1"] = false, ["2"] = true, ["3"] = false }
+function fxAddBackfire(vehicle)
+    if not (isElement(vehicle) and getVehicleType(vehicle) == "Automobile") then
+        return
+    end
+    local modelFlags = getVehicleHandling(vehicle).modelFlags
+    local fourthByte = string.format("%08X", modelFlags):reverse():sub(4, 4)
+    local twoExhaust = allowedExhaustTypes[fourthByte] and allowedExhaustBytes[fourthByte]
+    local oneExhaust = allowedExhaustTypes[fourthByte]
+    if not oneExhaust then -- handling don't have exhaust
+        return
+    end
+    local speed = Vector3(getElementVelocity(vehicle)).length / 1.5
+    local exhX, exhY, exhZ = getVehicleDummyPosition(vehicle, "exhaust")
+    if not exhX then -- if exhaust don't exist
+        return
+    end
+    local direction = Vector3(getPositionFromElementOffset(vehicle, 0, -10000000, 0))
+    for _, side in ipairs({exhX, -1 * exhX}) do
+        local exhaust = Vector3(getPositionFromElementOffset(vehicle, side, exhY + speed, exhZ))
+        fxAddGunshot(exhaust, direction)
+        if not twoExhaust then -- allow only one exhaust to backfire
+            return
+        end
+    end
+end
+
+local last = 0
+function waitTick(tick, limiter)
+    local now = getTickCount()
+    if last + (tick or 2) > now then
+        return false
+    end
+    last = now
+    return true
+end
+
+function stopEngine(vehicle)
+    vehicle = source or vehicle
+    if not (type(vehicle) == "userdata" and getElementType(vehicle) == "vehicle") then
+        return false
+    end
+
+    local engineData = data[vehicle]
+    local extrasData = eData[vehicle]
+    if engineData then
+        if isElement(engineData.engine) then destroyElement(engineData.engine) end
+        engineData.engine = nil
+        engineData.rpm = 0
+    end
+    if extrasData then
+        if isElement(extrasData.turbo) then destroyElement(extrasData.turbo) end
+        extrasData.engine = nil
+        extrasData.rpm = 0
+    end
+    engineData = nil
+    extrasData = nil
+    handling[vehicle] = nil
+    setElementData(vehicle, "engineRPM", nil)
+    table.removeValue(vehicles, vehicle)
+end
+
+function playAttachedSound3D(soundPath, element, loop, volume, speed, minDistance, maxDistance)
     if not soundPath or not isElement(element) then
         return false
     end
@@ -115,49 +115,52 @@ function playAttachedSound3D(soundPath, element, loop)
     attachElements(sound, element)
     setElementDimension(sound, getElementDimension(element))
     setElementInterior(sound, getElementInterior(element))
+
+    setSoundSpeed(sound, speed or 1)
+    setSoundVolume(sound, volume or 1)
+    setSoundMinDistance(sound, minDistance or 100/15)
+    setSoundMaxDistance(sound, maxDistance or 100)
     return sound
 end
 
 function isOnGround(vehicle)
     local traction = getVehicleHandling(vehicle)["driveType"]
     if getVehicleType(vehicle) == "Bike" then
-        local wheelStates = {isVehicleWheelOnGround(vehicle, 0), isVehicleWheelOnGround(vehicle, 1)}
-        return wheelStates[1] or wheelStates[2]
+        local states = {isVehicleWheelOnGround(vehicle, 0), isVehicleWheelOnGround(vehicle, 1)}
+        return states[1] or states[2]
+    end
+    local states = {isVehicleWheelOnGround(vehicle, 0), isVehicleWheelOnGround(vehicle, 1), isVehicleWheelOnGround(vehicle, 2), isVehicleWheelOnGround(vehicle, 3)}
+    if traction == "rwd" then
+        return states[3] or states[4]
+    elseif traction == "awd" then
+        return (states[3] or states[4]) or (states[1] or states[2])
     else
-        local wheelStates = {isVehicleWheelOnGround(vehicle, 0), isVehicleWheelOnGround(vehicle, 1), isVehicleWheelOnGround(vehicle, 2), isVehicleWheelOnGround(vehicle, 3)}
-        if traction == "rwd" then
-            return wheelStates[3] or wheelStates[4]
-        elseif traction == "awd" then
-            return (wheelStates[3] or wheelStates[4]) or (wheelStates[1] or wheelStates[2])
-        else
-            return wheelStates[1] or wheelStates[2]
-        end
+        return states[1] or states[2]
     end
 end
 
 function isDrifting(vehicle)
     if getVehicleType(vehicle) == "Bike" then
         return not isVehicleWheelOnGround(vehicle, 1)
+    end
+    local traction = getVehicleHandling(vehicle)["driveType"]
+    local frictionStates = {getVehicleWheelFrictionState(vehicle, 0), getVehicleWheelFrictionState(vehicle, 2), getVehicleWheelFrictionState(vehicle, 1), getVehicleWheelFrictionState(vehicle, 3)}
+    if traction == "rwd" then
+        return frictionStates[3] == 1 and frictionStates[4] == 1
+    elseif traction == "awd" then
+        return (frictionStates[3] == 1 and frictionStates[4] == 1) or (frictionStates[1] == 1 and frictionStates[2] == 1)
     else
-        local traction = getVehicleHandling(vehicle)["driveType"]
-        local frictionStates = {getVehicleWheelFrictionState(vehicle, 0), getVehicleWheelFrictionState(vehicle, 2), getVehicleWheelFrictionState(vehicle, 1), getVehicleWheelFrictionState(vehicle, 3)}
-        if traction == "rwd" then
-            return frictionStates[3] == 1 and frictionStates[4] == 1
-        elseif traction == "awd" then
-            return (frictionStates[3] == 1 and frictionStates[4] == 1) or (frictionStates[1] == 1 and frictionStates[2] == 1)
-        else
-            return frictionStates[1] == 1 and frictionStates[2] == 1
-        end
+        return frictionStates[1] == 1 and frictionStates[2] == 1
     end
 end
 
 function getDrift(vehicle, x, y)
     local _, _, rz = getElementRotation(vehicle)
-    local sn, cs = -sin(rad(rz)), cos(rad(rz))
-    local speed = sqrt(x * x + y * y)
+    local sn, cs = -math.sin(math.rad(rz)), math.cos(math.rad(rz))
+    local speed = math.sqrt(x * x + y * y)
     local cosx = (sn * x + cs * y) / speed
-    local result = deg(acos(cosx))
-    return max(min(result, 0), 20)/20
+    local result = math.deg(math.acos(cosx))
+    return clamp(result, 0, 20) / 20
 end
 
 function isElegible(vehicle)
@@ -165,45 +168,47 @@ function isElegible(vehicle)
         if getVehicleController(vehicle) and isElementWithinColShape(vehicle, areaZone) and not isVehicleBlown(vehicle) then
             return true
         end
-        return false
     end
     return false
 end
 
 local function updateHandling()
-    for i=1, #vehicles do local veh = vehicles[i]
-        if isElegible(veh) then
-            local hnd = getVehicleHandling(veh)
-            handling[veh] = handling[veh] or {}
-            handling[veh].maxSpeed = hnd['maxVelocity']
-            handling[veh].maxGears = hnd['numberOfGears']
+    for _, vehicle in pairs(vehicles) do
+        if isElegible(vehicle) then
+            local hnd = getVehicleHandling(vehicle)
+            handling[vehicle] = handling[vehicle] or {}
+            handling[vehicle].maxSpeed = hnd['maxVelocity']
+            handling[vehicle].maxGears = hnd['numberOfGears']
         end
     end
 end
-setTimer(updateHandling, 1.5*1000, 0)
+setTimer(updateHandling, 2*1000, 0)
+
+local function canProceed(element)
+    element = element or source
+    if isElegible(element) and not table.hasValue(vehicles, element) then
+        table.insert(vehicles, element)
+        updateHandling()
+    end
+end
 
 local function insertVehicle()
-    local allVehicles = getElementsWithinColShape(areaZone, "vehicle")
-    for i=1, #allVehicles do local veh = allVehicles[i]
-        if isElegible(veh) and not table.hasValue(vehicles, veh) then
-            table.insert(vehicles, veh)
-            updateHandling()
-        end
+    local vehicles = getElementsWithinColShape(areaZone, "vehicle")
+    for _, vehicle in pairs(vehicles) do
+        canProceed(vehicle)
     end
 end
 
 addEventHandler("onClientResourceStart", resourceRoot, function()
-    areaZone = createColSphere(0, 0, 0, audioDistance/2)
+    areaZone = createColSphere(0, 0, 0, engineDistance/2)
     attachElements(areaZone, localPlayer)
 
     insertVehicle()
 
-    addEventHandler("onClientColShapeHit", areaZone, function(element)
-        if isElegible(element) and not table.hasValue(vehicles, element) then
-            table.insert(vehicles, element)
-            updateHandling()
-        end
-    end)
+    addEventHandler("onClientColShapeHit", areaZone, canProceed)
+    addEventHandler("onClientElementStreamIn", root, canProceed)
+    addEventHandler("onClientElementDestroy", root, stopEngine)
+    addEventHandler("onClientVehicleExplode", root, stopEngine)
 
     addEventHandler("onClientColShapeLeave", areaZone, function(element)
         if table.hasValue(vehicles, element) then
@@ -211,24 +216,15 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
         end
     end)
 
-    addEventHandler ("onClientPlayerVehicleEnter", root, function(vehicle, seat)
-        if seat == 0 and isElegible(vehicle) and not table.hasValue(vehicles, vehicle) then
-            table.insert(vehicles, vehicle)
-            updateHandling()
+    addEventHandler ("onClientVehicleEnter", root, function(_, seat)
+        if seat == 0 and not table.hasValue(vehicles, source) then
+            canProceed(source)
         end
     end)
 
-    addEventHandler ("onClientPlayerVehicleExit", root, function(vehicle, seat)
-        if seat == 0 and table.hasValue(vehicles, vehicle) then
-            stopEngine(vehicle)
+    addEventHandler ("onClientVehicleExit", root, function(_, seat)
+        if seat == 0 and table.hasValue(vehicles, source) then
+            stopEngine(source)
         end
     end)
 end)
-
-local function removeVehicle()
-    if isElement(source) and getElementType(source) == "vehicle" then
-        stopEngine(source)
-    end
-end
-addEventHandler("onClientElementDestroy", root, removeVehicle)
-addEventHandler("onClientVehicleExplode", root, removeVehicle)

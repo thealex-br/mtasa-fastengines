@@ -1,9 +1,9 @@
 <meta>
-	<info name="fast engines" author="thealex-br" type="script" version="1.3.2"/>
+	<info name="fast engines" author="thealex-br" type="script" version="2.8.4"/>
 	
 	<script src="config.lua" type="client"/>
-	<script src="extras.lua" type="client"/>
 	<script src="engine.lua" type="client"/>
+    <script src="extras.lua" type="client"/>
 	<script src="common.lua" type="client"/>
 
     <file src="audio/extras/turbo.wav"/>
@@ -26,11 +26,17 @@
 	<file src="audio/ferrari1.Ogg"/>
 	    <file src="audio/mr2.Ogg"/>
         <file src="audio/gti.Ogg"/>
+        <file src="audio/nsx.Ogg"/>
     <file src="audio/charger.Ogg"/>
+    <file src="audio/lotus1.Ogg"/>
     <file src="audio/charger2.Ogg"/>
     <file src="audio/wraith.Ogg"/>
     <file src="audio/magnum.Ogg"/>
     <file src="audio/300zx.Ogg"/>
+    <file src="audio/ducati998.Ogg"/>
+    <file src="audio/suzuki.Ogg"/>
+    <file src="audio/hondacbr.Ogg"/>
+    <file src="audio/hondacbhornet.Ogg"/>
     <file src="audio/240sx.Ogg"/>
     <file src="audio/aston1.Ogg"/>
     <file src="audio/audi1.Ogg"/>
@@ -51,6 +57,7 @@
     <file src="audio/lamborghini5.Ogg"/>
     <file src="audio/lexuslfa.Ogg"/>
     <file src="audio/mercedes1.Ogg"/>
+    <file src="audio/mercedes2.Ogg"/>
     <file src="audio/bmwm3gtr.Ogg"/>
     <file src="audio/mitsubishievo.Ogg"/>
     <file src="audio/porsche1.Ogg"/>
