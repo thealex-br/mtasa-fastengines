@@ -18,7 +18,7 @@ local function smoothRPM(vehicle, rpm, maxrpm, smoother)
     return data[vehicle].rpm
 end
 
-local exception = { [17] = true, [19] = true }
+local exception = { [17] = true, [19] = true, [6] = true }
 addEventHandler("onClientWorldSound", root, function(group)
     if isElegible(source) then
         local id = getCustomID(source)
