@@ -2,7 +2,7 @@ local function smoothRPM(vehicle, rpm)
     local currentRPM = getData(vehicle, "turborpm") or 0
     local nRPM = currentRPM + (currentRPM < rpm and 0.08 or -0.2)
     currentRPM = currentRPM < rpm and math.min(nRPM, rpm) or math.max(nRPM, rpm)
-    local final = clamp(currentRPM, 0, 1)
+    local final = math.clamp(currentRPM, 0, 1)
     setData(vehicle, "turborpm", final)
     return final
 end
@@ -25,7 +25,7 @@ function doExtras(vehicle, finalRPM, accel, brake)
             local rpm = getData(vehicle, "turborpm")
             rpm = smoothRPM(vehicle, (finalRPM >= config.turbo.enable and accel > brake and accel >= config.turbo.enable) and (rpm + accel*0.1) or (rpm - 0.7) )
             setData(vehicle, "turborpm", rpm)
-            setSoundSpeed(turbo, rpm)
+            setSoundSpeed(turbo, rpm+0.001)
         end
     elseif isElement(turbo) then
         destroyElement(turbo)
