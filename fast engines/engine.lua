@@ -52,8 +52,9 @@ function doEngineSound()
                     local hnddrive = hnd.traction
 
                     local x, y, z = getElementVelocity(vehicle)
-                    local speed = (x*x + y*y) ^ info.ratio or 0.5
-                    local realSpeed = (x*x + y*y) ^ 0.5 * 180
+                    local vector = (x*x + y*y)
+                    local speed = vector ^ info.ratio or 0.5
+                    local realSpeed = vector ^ 0.5 * 180
 
                     local hill = math.clamp(z, -0.09, 0.09)
                     local gear = getVehicleCurrentGear(vehicle)
