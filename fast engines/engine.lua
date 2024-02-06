@@ -17,10 +17,9 @@ addEventHandler("onClientWorldSound", root, function(group)
 end)
 
 function extraSmoother(vehicle, engine, rpm, info)
-    rpm = math.max(rpm, info.min)
     rpm = smooth(rpm, 0.35, vehicle)
 
-    local clamped = toScale(rpm, info.min, info.max)
+    local clamped = math.scale(rpm, info.min, info.max)
     setElementData(vehicle, config.rpmKey, clamped, false)
 
     setSoundSpeed(engine, rpm)
@@ -30,10 +29,6 @@ function extraSmoother(vehicle, engine, rpm, info)
 end
 
 function doEngineSound()
-    if not vehicles or #vehicles == 0 then
-        return
-    end
-
     while true do
         for _, vehicle in ipairs(vehicles) do
             local driver = getVehicleController(vehicle)
@@ -51,58 +46,52 @@ function doEngineSound()
                     local brakeInput = getPedAnalogControlState(driver, "brake_reverse", false)
                     local hbrakeInput = getPedAnalogControlState(driver, "handbrake", false)
 
-                    local hndspeed = getData(vehicle, "topSpeed")
-                    local hndgears = getData(vehicle, "maxGears")
+                    local hnd = getData(vehicle, "handling")
+                    local hndspeed = hnd.topSpeed
+                    local hndgears = hnd.maxGears
+                    local hnddrive = hnd.traction
 
                     local x, y, z = getElementVelocity(vehicle)
-                    local speed = math.pow(x*x + y*y, info.ratio or 0.5)
-                    local realSpeed = math.pow(x*x + y*y, 0.5) * 180
+                    local speed = (x*x + y*y) ^ info.ratio or 0.5
+                    local realSpeed = (x*x + y*y) ^ 0.5 * 180
 
                     local hill = math.clamp(z, -0.09, 0.09)
                     local gear = getVehicleCurrentGear(vehicle)
                     gear = gear > 0 and gear or config.engine.ratio[0]
                     local gearMult = (info.gearRatio and info.gearRatio[gear]) or (config.engine.ratio and config.engine.ratio[gear]) or 1
 
-                    if not state then
-                        speed = 0
-                    else
-                        if not isOnGround(vehicle) then
-                            speed = info.air * speed
-                        else
-                            local isDrifting = isTractionState(vehicle, 1)
-                            if isDrifting and accelInput > brakeInput then
-                                if realSpeed < 0.1 * hndspeed and gear == 1 then
-                                    speed = info.accel * math.max(speed + hill, 0.7)
-                                else
-                                    local drift = getDrift(vehicle, x, y)
-                                    speed = info.accel * gearMult * speed + hill + (drift > 0.1 and info.slide*drift or 0)
-                                end
+                    if state then
+                        if isOnGround(vehicle, hnddrive) then
+                            local isDrifting = isTractionState(vehicle, hnddrive, 1, 1)
+                            if isDrifting and realSpeed < 0.1*hndspeed and gear == 1 then
+                                speed = info.accel * math.max(speed + hill, 0.7)
                             else
                                 if accelInput > brakeInput then
-                                    speed = info.accel * gearMult * speed + hill
+                                    local drift = isDrifting and info.slide * getDrift(vehicle, x, y) or 0
+                                    speed = info.accel * gearMult * speed + hill + drift
                                 else
-                                    speed = info.decel * speed + hill
+                                    speed = info.decel * gearMult * speed + hill
                                 end
                             end
                             if realSpeed < 8 and (isDrifting or hbrakeInput == 1 and accelInput > 0.5) then
                                 speed = info.accel
                             end
+                        else
+                            speed = info.air * gearMult * speed
                         end
                     end
+                    speed = (gear + speed / gear) / hndspeed
+                    speed = math.max(speed, state and info.min or 0)
 
-                    local audio = (gear + speed / gear) / hndspeed
-                    audio = math.max(audio, state and info.min or 0)
-
-                    local rpm = smoothRPM(vehicle, audio, info.max, info.smoother)
-
-                    local volume = info.vol - math.clamp( (config.engine.volumeDown * info.vol) * rpm, info.min, config.engine.volumeMin * info.vol)
+                    local rpm = smoothRPM(vehicle, speed, info.max, info.smoother)
+                    local vol = info.vol - math.clamp( (config.engine.volumeDown * info.vol) * rpm, info.min, config.engine.volumeMin * info.vol)
 
                     doExtras(vehicle, rpm, accelInput, brakeInput)
                     setSoundSpeed(engine, rpm)
 
                     if not config.smoother.enable or (config.smoother.simple and driver ~= localPlayer) then
-                        setElementData(vehicle, config.rpmKey, toScale(rpm, info.min, info.max), false)
-                        setSoundVolume(engine, config.engine.volume*volume)
+                        setElementData(vehicle, config.rpmKey, math.scale(rpm, info.min, info.max), false)
+                        setSoundVolume(engine, config.engine.volume * vol)
                     else
                         setData(vehicle, "cached", {max=info.max, min=info.min, vol=info.vol})
                     end
