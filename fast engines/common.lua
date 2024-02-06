@@ -23,16 +23,6 @@ function math.clamp(value, min, max)
     return math.max(math.min(value, max), min)
 end
 
-local last = 0
-function waitTime(ms)
-    local now = getTickCount()
-    if last + (ms or 0) > now then
-        return false
-    end
-    last = now
-    return true
-end
-
 function table.removeValue(tab, val)
     for index, value in pairs(tab) do
         if value == val then
@@ -101,7 +91,6 @@ function stopEngine(vehicle)
     if not (type(vehicle) == 'userdata' and getElementType(vehicle) == "vehicle") then
         return false
     end
-    
     setData(vehicle, "elegible", nil)
 
     local engine = getData(vehicle, "engine")
@@ -253,7 +242,6 @@ addEventHandler("onClientResourceStart", resourceRoot, function()
 
     addEventHandler("onClientElementDestroy", root, stopEngine)
     addEventHandler("onClientVehicleExplode", root, stopEngine)
-
 
     addEventHandler ("onClientVehicleEnter", root, function(_, seat)
         if seat == 0 and not table.hasValue(vehicles, source) then
