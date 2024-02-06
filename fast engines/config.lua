@@ -8,8 +8,9 @@
     + simplified configuration and engine configuration structure
     + simplified code in general
     + fixed silenced vehicle when spawning inside the detection area (colshape)
-    + more performant "anti-default sound for vehicles with custom sounds"
-    + more smoother rpm transition
+    + more performant "default sound disabler"
+    + more smoother rpm transition (optional)
+    + output rpm is always a number between 0 and 1
 ]]
 
 -- General Configurations
@@ -17,7 +18,7 @@ config = {
     wait = 30,          -- wait ms between every frame, keep below 40
     
     smoother = { -- extra smoothness to rpm, will increase cpu usage to +- 0.2% per vehicle
-        enable = true,
+        enable = false,
         simple = true,
     },
 
