@@ -1,5 +1,3 @@
-minimal = 0.00001
-
 local storage = {}
 function setData(element, key, value)
     storage[element] = storage[element] or {}
@@ -21,7 +19,7 @@ function smooth(value, factor, name)
     return update(value, name)
 end
 
-function clamp(value, min, max)
+function math.clamp(value, min, max)
     return math.max(math.min(value, max), min)
 end
 
@@ -189,7 +187,7 @@ function getDrift(vehicle, x, y)
     local speed = math.sqrt(x * x + y * y)
     local cosx = (sn * x + cs * y) / speed
     local result = math.deg(math.acos(cosx))
-    return clamp(result, 0, 15) / 15
+    return math.clamp(result, 0, 15) / 15
 end
 
 function toScale(number, min, max)
