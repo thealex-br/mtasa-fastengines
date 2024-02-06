@@ -5,7 +5,7 @@ function setData(element, key, value)
 end
 function getData(element, key)
     return storage[element] and storage[element][key] or false
-end -- yes, i really hate working with tables ¯\_(ツ)_/¯
+end
 
 local smooths = {}
 local function update(value, name)
@@ -21,6 +21,10 @@ end
 
 function math.clamp(value, min, max)
     return math.max(math.min(value, max), min)
+end
+
+function math.scale(number, min, max)
+    return (number + min) / (max + min)
 end
 
 function table.removeValue(tab, val)
@@ -108,8 +112,7 @@ function stopEngine(vehicle)
     setData(vehicle, "turbo", nil)
     setData(vehicle, "turborpm", nil)
 
-    setData(vehicle, "topSpeed", nil)
-    setData(vehicle, "maxGears", nil)
+    setData(vehicle, "handling", nil)
 
     storage[vehicle] = nil
     smooths[vehicle] = nil
@@ -126,6 +129,8 @@ function playAttachedSound3D(soundPath, element, loop, vol, speed, min, max)
     if not isElement(sound) then
         return false
     end
+    setData(element, "elegible", true)
+
     attachElements(sound, element)
     setElementDimension(sound, getElementDimension(element))
     setElementInterior(sound, getElementInterior(element))
@@ -134,17 +139,15 @@ function playAttachedSound3D(soundPath, element, loop, vol, speed, min, max)
     setSoundVolume(sound, vol or 0)
     setSoundMinDistance(sound, min or 100/6)
     setSoundMaxDistance(sound, max or 100)
-    setData(element, "elegible", true)
     return sound
 end
 
-function isOnGround(vehicle)
+function isOnGround(vehicle, traction)
     local vehicleType = getVehicleType(vehicle)
     if vehicleType == "Bike" then
         local states = {f=isVehicleWheelOnGround(vehicle, 0), b=isVehicleWheelOnGround(vehicle, 1)}
         return states.f or states.b
     end
-    local traction = getVehicleHandling(vehicle).driveType
     local states = {fl=isVehicleWheelOnGround(vehicle, 0), fr=isVehicleWheelOnGround(vehicle, 2), rl=isVehicleWheelOnGround(vehicle, 1), rr=isVehicleWheelOnGround(vehicle, 3)}
     local lockup = {
         ['rwd'] = states.fr or states.rr,
@@ -154,49 +157,40 @@ function isOnGround(vehicle)
     return lockup[traction]
 end
 
-function isTractionState(vehicle, state)
+function isTractionState(vehicle, traction, rear, front)
     local vehicleType = getVehicleType(vehicle)
     if vehicleType == "Bike" then
         local states = {f=isVehicleWheelOnGround(vehicle, 0), b=isVehicleWheelOnGround(vehicle, 1)}
         return not states.b
     end
-    local traction = getVehicleHandling(vehicle).driveType
     local states = {fl=getVehicleWheelFrictionState(vehicle, 0), fr=getVehicleWheelFrictionState(vehicle, 2), rl=getVehicleWheelFrictionState(vehicle, 1), rr=getVehicleWheelFrictionState(vehicle, 3)}
     local lockup = {
-        ['rwd'] = states.rl == state and states.rr == state,
-        ['awd'] = (states.rl == state and states.rr == state) or (states.fl == state and states.fr == state),
-        ['fwd'] = {states.fl == state and states.fr == state},
+        ['rwd'] = states.rl == rear and states.rr == rear,
+        ['awd'] = (states.rl == rear and states.rr == rear) or (states.fl == front and states.fr == front),
+        ['fwd'] = {states.fl == front and states.fr == front},
     }
     return lockup[traction]
 end
 
 function getDrift(vehicle, x, y)
-    local rot = select(3, getElementRotation(vehicle))
-    local sn, cs = -math.sin(math.rad(rot)), math.cos(math.rad(rot))
     local speed = math.sqrt(x * x + y * y)
+    if speed < 0.13 then
+        return 0
+    end
+    local _, _, rot = getElementRotation(vehicle)
+    local radRot = math.rad(rot)
+    local sn, cs = -math.sin(radRot), math.cos(radRot)
     local cosx = (sn * x + cs * y) / speed
-    local result = math.deg(math.acos(cosx))
-    return math.clamp(result, 0, 15) / 15
+    local acos = math.acos(cosx)
+    local result = math.deg(acos)
+    return math.min(result / 15, 1) -- Use math.min() to clamp the result
 end
 
-function toScale(number, min, max)
-    return (number + min) / (max + min)
-end
-
-function isElegible(vehicle, ignoreCol)
+function isElegible(vehicle)
     if not (getElementType(vehicle) == "vehicle" and isElementStreamedIn(vehicle)) then
         return false
     end
-    if not getVehicleController(vehicle) then
-        return false
-    end
-    if isVehicleBlown(vehicle) then
-        return false
-    end
-    if ignoreCol then
-        return true
-    end
-    if not isElementWithinColShape(vehicle, areaZone) then
+    if not (getVehicleController(vehicle) and isElementWithinColShape(vehicle, areaZone)) and isVehicleBlown(vehicle) then
         return false
     end
     return true
@@ -206,12 +200,11 @@ local function updateHandling()
     for _, vehicle in ipairs(vehicles) do
         if isElegible(vehicle) then
             local hnd = getVehicleHandling(vehicle)
-            setData(vehicle, "topSpeed", hnd['maxVelocity'])
-            setData(vehicle, "maxGears", hnd['numberOfGears'])
+            setData(vehicle, "handling", {topSpeed = hnd.maxVelocity, maxGears = hnd.numberOfGears, traction = hnd.driveType})
         end
     end
 end
-setTimer(updateHandling, 1000, 0)
+setTimer(updateHandling, 3000, 0)
 
 local function canProceed(element)
     element = element or source
