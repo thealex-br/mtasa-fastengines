@@ -1,71 +1,64 @@
-eData = {
-    ['turbo'] = nil,
-    ['rpm'] = 0,
-    ['gear'] = 0,
-    ['blow'] = false,
-}
-
 local function smoothRPM(vehicle, rpm)
-    local currentRPM = eData[vehicle].rpm or minimal
+    local currentRPM = getData(vehicle, "turborpm") or minimal
     local nRPM = currentRPM + (currentRPM < rpm and 0.08 or -0.2)
     currentRPM = currentRPM < rpm and math.min(nRPM, rpm) or math.max(nRPM, rpm)
-    eData[vehicle].rpm = clamp(currentRPM, minimal, 1)
-    return eData[vehicle].rpm
+    local final = clamp(currentRPM, minimal, 1)
+    setData(vehicle, "turborpm", final)
+    return final
 end
 
-function doExtras(vehicle, driver, rpm, accel, brake)
-    local data = getElementData(vehicle, tunningKey)
+function doExtras(vehicle, finalRPM, accel, brake)
+    local data = getElementData(vehicle, config.tunningKey)
     if not data then
         return
     end
-    eData[vehicle] = eData[vehicle] or {}
-    local eData = eData[vehicle]
 
     local gear = getVehicleCurrentGear(vehicle)
 
+    local turbo = getData(vehicle, "turbo")
+
     if data.turbo then
-        if not isElement(eData.turbo) then
-            eData.turbo = playAttachedSound3D("audio/extras/turbo.wav", vehicle, true, turboVolume, 0.01, turboDistance/15, turboDistance)
-            eData.rpm = 0
+        if not isElement(turbo) then
+            setData(vehicle, "turbo", playAttachedSound3D("audio/extras/turbo.wav", vehicle, true, config.turbo.volume, 0, config.turbo.distance/6, config.turbo.distance))
+            setData(vehicle, "turborpm", 0)
         else
-            eData.rpm = smoothRPM(vehicle, (rpm > minTurboRPM and accel > brake) and (eData.rpm + 0.1) or (eData.rpm - 0.7) )
-            setSoundSpeed(eData.turbo, eData.rpm)
+            local rpm = getData(vehicle, "turborpm")
+            rpm = smoothRPM(vehicle, (finalRPM >= config.turbo.enable and accel > brake and accel >= config.turbo.enable) and (rpm + accel*0.1) or (rpm - 0.7) )
+            setData(vehicle, "turborpm", rpm)
+            setSoundSpeed(turbo, rpm)
         end
-    elseif isElement(eData.turbo) then
-        destroyElement(eData.turbo)
-        eData.turbo = nil
+    elseif isElement(turbo) then
+        destroyElement(turbo)
+        setData(vehicle, "turbo", nil)
     end
 
     if data.turbo and data.blowoff then
-        if rpm > minBlowoffRPM and accel > brake then
-            eData.blow = true
-        elseif accel <= brake and eData.rpm > 0.95 * minBlowoffRPM and eData.blow then
-            eData.blow = false
-            playAttachedSound3D("audio/extras/turbo_shift1.wav", vehicle, false, blowoffVolume, 1, blowoffDistance/15, blowoffDistance)
+        if accel <= brake and getData(vehicle, "turborpm") > config.blowoff.enable then
+            playAttachedSound3D("audio/extras/turbo_shift1.wav", vehicle, false, config.blowoff.volume, 1, config.blowoff.distance/6, config.blowoff.distance)
 
-            eData.rpm = 0.3 * minBlowoffRPM
+            setData(vehicle, "turborpm", 0)
 
-            if isTimer(eData.timer) then
-                killTimer(eData.timer)
+            if isTimer(getData(vehicle, "timer")) then
+                killTimer(getData(vehicle, "timer"))
             end
-            eData.timer = setTimer(fxAddBackfire, 20, 4, vehicle)
+            setData(vehicle, "timer", setTimer(fxAddBackfire, 20, 3, vehicle))
         end
     end
 
-    eData.gear = eData.gear or gear
+    setData(vehicle, "gear", getData(vehicle, "gear") or gear )
 
-    if rpm > minAlsRPM and eData.gear ~= gear then
-        eData.gear = gear
-        if data.turbo then
-            eData.rpm = 0.5*minAlsRPM
+    if finalRPM > config.als.enable and getData(vehicle, "gear") ~= gear then
+        setData(vehicle, "gear", gear)
+        if getData(vehicle, "turbo") then
+            setData(vehicle, "turborpm", 0)
         end
 
         if data.als then
-            if isTimer(eData.timer) then
-                killTimer(eData.timer)
+            if isTimer(getData(vehicle, "timer")) then
+                killTimer(getData(vehicle, "timer"))
             end
-            eData.timer = setTimer(fxAddBackfire, 30, 3, vehicle)
-            playAttachedSound3D("audio/extras/als"..math.random(13)..".wav", vehicle, false, alsVolume, 1, alsDistance/15, alsDistance)
+            setData(vehicle, "timer", setTimer(fxAddBackfire, 30, 2, vehicle))
+            playAttachedSound3D("audio/extras/als"..math.random(3)..".wav", vehicle, false, config.als.volume, 1, config.als.distance/6, config.als.distance)
         end
 
     end
