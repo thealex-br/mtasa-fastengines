@@ -1,8 +1,8 @@
 local function smoothRPM(vehicle, rpm)
-    local currentRPM = getData(vehicle, "turborpm") or minimal
+    local currentRPM = getData(vehicle, "turborpm") or 0
     local nRPM = currentRPM + (currentRPM < rpm and 0.08 or -0.2)
     currentRPM = currentRPM < rpm and math.min(nRPM, rpm) or math.max(nRPM, rpm)
-    local final = clamp(currentRPM, minimal, 1)
+    local final = clamp(currentRPM, 0, 1)
     setData(vehicle, "turborpm", final)
     return final
 end
